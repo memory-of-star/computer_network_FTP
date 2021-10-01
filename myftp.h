@@ -1,15 +1,17 @@
-#include<sys/stat.h>
-#include<fcntl.h>
-#include<unistd.h>
-#include<sys/types.h>
-#include<sys/signal.h>
-#include<sys/socket.h>
-#include<netinet/in.h>
-#include<arpa/inet.h>
-#include<sys/epoll.h>
-#include<errno.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/signal.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/epoll.h>
+#include <errno.h>
 #include <stdio.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define MAXLINE 64
 #define MAX_PACKET_SIZE   10240    // 数据包的最大长度,单位是sizeof(char)

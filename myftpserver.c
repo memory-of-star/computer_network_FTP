@@ -16,6 +16,9 @@ int main(int argc, char **argv){
     for(;;){
         len = sizeof(cliaddr);
         n = recvfrom(sockfd, mesg, MAXLINE, 0, (struct sockaddr *)&cliaddr, &len);
+        //debug code
+        puts("message received");
+        //
         sendto(sockfd, mesg, n, 0, (struct sockaddr *)&cliaddr, len);
     }
 }

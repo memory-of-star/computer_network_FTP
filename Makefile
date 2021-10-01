@@ -1,3 +1,6 @@
+all: myftpserver myftpclient
+.PHONY: all
+
 myftpclient: myftpclient.o
 	gcc -o myftpclient myftpclient.o
 
