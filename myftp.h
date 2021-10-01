@@ -18,6 +18,7 @@
 #define MAXFILEDIRLENGTH 256     // 存放文件路径的最大长度
 #define PORT     4096    // 端口号
 #define SERVER_IP    "127.0.0.1" // server端的IP地址
+#define LISTENQ 64
 
 // 各种消息的宏定义
 #define INVALID_MSG      -1   // 无效的消息标识

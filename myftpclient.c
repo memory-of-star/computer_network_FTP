@@ -1,47 +1,45 @@
 #include "myftp.h"
 
+void str_cli(FILE *fp, int sockfd);
+
 int main(int argc, char **argv)
 {
-    int sockfd, n;
+    int sockfd;
     struct sockaddr_in servaddr;
-    char sendline[MAXLINE], recvline[MAXLINE + 1];
+
     if (argc != 2){
         fprintf(stderr, "%s\n", "usage: echoCli <IPaddress>");
         exit(1);
     }
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
     servaddr.sin_port = htons(4000);
+    inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
+    connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    str_cli(stdin, sockfd);
+    exit(1);
+}
 
-    // debug code
-    // printf("debug point 1");
-    // char *p = fgets(sendline, MAXLINE, stdin);
-    // puts(sendline);
-    // printf("%d", (int)p);
-    // p = fgets(sendline, MAXLINE, stdin);
-    // puts(sendline);
-    // printf("%d", (int)p);
-    //
-    
-    while (fgets(sendline, MAXLINE, stdin) != NULL){
+void str_cli(FILE *fp, int sockfd){
+    char sendline[MAXLINE], recvline[MAXLINE];
+    int n;
+
+    while(fgets(sendline, MAXLINE, fp) != NULL){
+        write(sockfd, sendline, strlen(sendline));
         //debug code
-        puts("send a message");
+        //printf("strlen(sendline) = %d\n", (int)strlen(sendline));
         //
-        sendto(sockfd, sendline, strlen(sendline), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
+
+        if ((n = read(sockfd, recvline, MAXLINE)) == 0){
+            fprintf(stderr, "%s\n", "server terminated prematurely");
+            exit(1);
+        }
         //debug code
-        puts("message sent");
-        //
-        n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
-        //debug code
-        puts("message received");
+        //printf("receive %d bytes\n", n);
         //
         recvline[n] = 0;
-        //debug code
-        printf("%d\n", n);
-        //
         fputs(recvline, stdout);
     }
-    exit(0);
 }
