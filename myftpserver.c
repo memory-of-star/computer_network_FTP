@@ -113,7 +113,8 @@ again:
                     char *p = name_buf;
       
                     if((dir = opendir("filedir"))==NULL){  
-                        printf("failed to open filedir!\n");  
+                        printf("failed to open filedir!\n"); 
+                        write(connfd, &list_reply, sizeof(list_reply)); 
                         continue;  
                     }
 	                
@@ -140,6 +141,97 @@ again:
                     printf("client try to list files without authentication!\n");
                     write(connfd, &list_reply, sizeof(list_reply));
                 }
+            }
+            //receive a GET_REQUEST
+            else if (msg_buf.type == (char)0xA7){
+                char filename_buf[256]; // we assume that strlen(filename) < 256
+                struct message_s get_reply;
+                memcpy(get_reply.protocol, ftp_protocol, 6);
+                get_reply.type = 0xA8;
+                get_reply.status = 0;
+                get_reply.length = 12;
+
+                if (client_state == STATE_MAIN){
+
+                    //get the filename from client
+                    if ((n = read(connfd, filename_buf, msg_buf.length - 12)) < 0){
+                        fprintf(stderr, "fail to get the filename! download denied!\n");
+                        //send a GET_REPLY with status=0
+                        write(connfd, &get_reply, sizeof(get_reply));
+                        continue;
+                    }
+
+                    //then check if file is in filedir
+                    DIR *dir = NULL;  
+                    struct dirent entry;  
+                    struct dirent *result;
+                    int matched = 0;
+        
+                    if((dir = opendir("filedir"))==NULL){  
+                        printf("failed to open filedir!\n");  
+                        write(connfd, &get_reply, sizeof(get_reply));
+                        continue;  
+                    }
+                    
+                    while(!readdir_r(dir, &entry, &result) && result){
+                        if (entry.d_type == (char)8 && strcmp(entry.d_name, filename_buf) == 0){
+                            matched = 1;
+                            break;
+                        }
+                    }
+
+                    //if there is no such file
+                    if (!matched){
+                        printf("%s is not in filedir! download denied!\n", filename_buf);
+                        write(connfd, &get_reply, sizeof(get_reply));
+                        continue;
+                    }
+                    //now we know the file exist
+                    FILE *fp;
+                    char file_buf[MAX_FILE];
+                    char path[256] = {0};
+                    strcat(path, "./filedir/");
+                    strcat(path, filename_buf);
+    
+                    if((fp=fopen(path, "rb")) == NULL){
+                        fprintf(stderr, "Cannot open %s！\n", path);
+                        write(connfd, &get_reply, sizeof(get_reply));
+                        continue;
+                    }
+
+                    // while(fread(file_buf, sizeof(unsigned char), MAX_FILE, fp) != 0)
+                    //     byte_count++;
+
+                    fseek(fp, 0, SEEK_END);
+                    int size = ftell(fp);
+                    fseek(fp, 0, SEEK_SET);
+                    if(fread(file_buf, size, 1, fp) == 0){
+                        fprintf(stderr, "reading %s failed！\n", path);
+                        write(connfd, &get_reply, sizeof(get_reply));
+                        continue;
+                    }
+                    
+                    //ok, now we can tell the client to download the file
+                    get_reply.status = 1;
+                    write(connfd, &get_reply, sizeof(get_reply));
+                    printf("download allowed\n");
+
+                    struct message_s file_data;
+                    memcpy(file_data.protocol, ftp_protocol, 6);
+                    file_data.type = 0xFF;
+                    file_data.length = 12 + size;
+                    write(connfd, &file_data, sizeof(file_data));
+                    write(connfd, file_buf, size);
+                    printf("file sent\n");
+
+                    fclose(fp);
+
+                }
+                else{
+                    printf("client try to download files without authentication!\n");
+                    write(connfd, &get_reply, sizeof(get_reply));
+                }
+
             }
         }
         if (n < 0 && errno == EINTR)

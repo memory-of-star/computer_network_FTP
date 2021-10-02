@@ -24,6 +24,7 @@
 #define STATE_OPEN_CONNECTION 1 //client try to open a connection
 #define STATE_CONNECTED 2 //client connected, wait to be authentication
 #define STATE_MAIN 3 //client authentication granted, now you can excute main functions 
+#define MAX_FILE 10000
 
 
 

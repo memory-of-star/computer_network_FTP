@@ -145,6 +145,57 @@ int main(int argc, char **argv)
                 printf("you need to authenticate first!\n");
         }
 
+        else if (strcmp(args[0], "get") == 0){
+            if (state == STATE_MAIN){
+                //then send a protocol message GET_REQUEST to the server
+                struct message_s get_request;
+                memcpy(get_request.protocol, ftp_protocol, 6);
+                get_request.type = 0xA7;
+                get_request.length = 12 + strlen(args[1]) + 1;
+                write(sockfd, &get_request, sizeof(get_request));
+                write(sockfd, args[1], strlen(args[1]) + 1);
+
+                //get the GET_REPLY
+                if(read(sockfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xA8){
+                    fprintf(stderr, "fail to get GET_REPLY\n");
+                    printf("$");
+                    continue;
+                }
+                if (msg_buf.status == 0){
+                    fprintf(stderr, "download rejected\n");
+                    printf("$");
+                    continue;
+                }
+                //now download is allowed, we need to get file data
+                char file_buf[MAX_FILE];
+
+                if(read(sockfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xFF){
+                    fprintf(stderr, "fail to get FILE_DATA\n");
+                    printf("$");
+                    continue;
+                }
+
+                if (read(sockfd, &file_buf, msg_buf.length - 12) != (msg_buf.length - 12)){
+                    fprintf(stderr, "fail to get file data payload!\n");
+                    printf("$");
+                    continue;
+                }
+                
+                fprintf(stdout, "file downloaded successfully\n");
+
+                FILE *fp;
+                if((fp=fopen(args[1], "wb")) == NULL){
+                    fprintf(stderr, "Cannot open(or create) %s！\n", args[1]);
+                    continue;
+                }
+                fwrite(file_buf, sizeof(char), msg_buf.length - 12, fp);
+                fprintf(stdout, "file stored successfully\n");
+                fclose(fp);
+            }
+            else
+                printf("you need to authenticate first!\n");
+        }
+
         printf("$");
     }
     exit(1);
