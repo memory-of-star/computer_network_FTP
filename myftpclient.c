@@ -90,7 +90,7 @@ int main(int argc, char **argv)
                 if(read(sockfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xA4){
                     state = STATE_OFFLINE;
                     close(sockfd);
-                    fprintf(stderr, "fail to get OPEN_CONN_REPLY\n");
+                    fprintf(stderr, "fail to get AUTH_REPLY\n");
                     printf("$");
                     continue;
                 }
@@ -109,6 +109,40 @@ int main(int argc, char **argv)
                 printf("you need to open a connection before authentication!\n");
             else if (state == STATE_MAIN)
                 printf("you have already authenticated!\n");
+        }
+        //get a ls command, list the files
+        else if (strcmp(args[0], "ls") == 0){
+            if (state == STATE_MAIN){
+                //then send a protocol message LIST_REQUEST to the server
+                struct message_s list_request;
+                memcpy(list_request.protocol, ftp_protocol, 6);
+                list_request.type = 0xA5;
+                list_request.length = 12;
+                write(sockfd, &list_request, sizeof(list_request));
+
+                //get the file list reply
+                if(read(sockfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xA6){
+                    fprintf(stderr, "fail to get LIST_REPLY\n");
+                    printf("$");
+                    continue;
+                }
+                if (msg_buf.status == 0){
+                    fprintf(stderr, "list rejected\n");
+                    printf("$");
+                    continue;
+                }
+                //get the file name string
+                char name_buf[500];
+                if (read(sockfd, &name_buf, msg_buf.length - 12) != (msg_buf.length - 12)){
+                    fprintf(stderr, "fail to get file list string payload!\n");
+                    printf("$");
+                    continue;
+                }
+                fprintf(stdout, "file list get successfully, and show as below:\n");
+                printf("%s", name_buf);
+            }
+            else
+                printf("you need to authenticate first!\n");
         }
 
         printf("$");

@@ -95,6 +95,52 @@ again:
  
                 fclose(fp);
             }
+            //get an LIST_REQUEST
+            else if (msg_buf.type == (char)0xA5){
+                struct message_s list_reply;
+                memcpy(list_reply.protocol, ftp_protocol, 6);
+                list_reply.type = 0xA6;
+                list_reply.length = 12;
+                list_reply.status = 0;
+                
+
+                if (client_state == STATE_MAIN){
+                    //to get the file list
+     	            DIR *dir = NULL;  
+                    struct dirent entry;  
+                    struct dirent *result;
+                    char name_buf[500];
+                    char *p = name_buf;
+      
+                    if((dir = opendir("filedir"))==NULL){  
+                        printf("failed to open filedir!\n");  
+                        continue;  
+                    }
+	                
+     		        while(!readdir_r(dir, &entry, &result) && result){
+                        if (entry.d_type == (char)8){
+                            strcpy(p, entry.d_name);
+                            p = p + strlen(p);
+                            *p = '\n';
+                            p++;
+                        }
+                    }
+                    *p = 0;
+     		        closedir(dir); 
+
+                    //send the list reply
+                    list_reply.status = 1;
+                    list_reply.length += strlen(name_buf) + 1;
+                    write(connfd, &list_reply, sizeof(list_reply));
+                    write(connfd, name_buf, strlen(name_buf) + 1);
+                    printf("file list sent\n");
+    
+                }
+                else{
+                    printf("client try to list files without authentication!\n");
+                    write(connfd, &list_reply, sizeof(list_reply));
+                }
+            }
         }
         if (n < 0 && errno == EINTR)
             goto again; //soft interrupt, try again

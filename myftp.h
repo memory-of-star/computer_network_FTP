@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 
 #define MAXLINE 64
 #define PORT     4096    // 端口号

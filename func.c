@@ -27,4 +27,4 @@ char **prase_aguments(char *str){
     // printf("%d", (int)strlen(q));
 
     return args;
-}
+} 
