@@ -144,7 +144,7 @@ int main(int argc, char **argv)
             else
                 printf("you need to authenticate first!\n");
         }
-
+        // a get command, to download a file
         else if (strcmp(args[0], "get") == 0){
             if (state == STATE_MAIN){
                 //then send a protocol message GET_REQUEST to the server
@@ -186,11 +186,67 @@ int main(int argc, char **argv)
                 FILE *fp;
                 if((fp=fopen(args[1], "wb")) == NULL){
                     fprintf(stderr, "Cannot open(or create) %s！\n", args[1]);
+                    printf("$");
                     continue;
                 }
                 fwrite(file_buf, sizeof(char), msg_buf.length - 12, fp);
                 fprintf(stdout, "file stored successfully\n");
                 fclose(fp);
+            }
+            else
+                printf("you need to authenticate first!\n");
+        }
+        // put command, to upload a file
+        else if (strcmp(args[0], "put") == 0){
+            if (state == STATE_MAIN){
+                //first check whether the file is in the local
+                FILE *fp;
+                if ((fp = fopen(args[1], "rb")) == NULL){
+                    printf("there is no file named %s\n", args[1]);
+                    printf("$");
+                    continue;
+                }
+                char file_buf[MAX_FILE];
+
+                fseek(fp, 0, SEEK_END);
+                int size = ftell(fp);
+                fseek(fp, 0, SEEK_SET);
+
+                if(fread(file_buf, size, 1, fp) == 0){
+                    fprintf(stderr, "reading %s failed！\n", args[1]);
+                    fclose(fp);
+                    printf("$");
+                    continue;
+                }
+                fclose(fp);
+                //then send a protocol message PUT_REQUEST to the server
+                struct message_s put_request;
+                memcpy(put_request.protocol, ftp_protocol, 6);
+                put_request.type = 0xA9;
+                put_request.length = 12 + strlen(args[1]) + 1;
+                write(sockfd, &put_request, sizeof(put_request));
+                write(sockfd, args[1], strlen(args[1]) + 1);
+
+                //get the PUT_REPLY
+                if(read(sockfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xAA){
+                    fprintf(stderr, "fail to get PUT_REPLY\n");
+                    printf("$");
+                    continue;
+                }
+                if (msg_buf.status == 0){
+                    fprintf(stderr, "upload rejected\n");
+                    printf("$");
+                    continue;
+                }
+                //now upload is allowed, we need to push file data
+                struct message_s file_data;
+                memcpy(file_data.protocol, ftp_protocol, 6);
+                file_data.type = 0xFF;
+                file_data.length = 12 + size;
+                write(sockfd, &file_data, sizeof(file_data));
+                write(sockfd, file_buf, size);
+                printf("file sent\n");
+
             }
             else
                 printf("you need to authenticate first!\n");

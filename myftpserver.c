@@ -208,6 +208,7 @@ again:
                     if(fread(file_buf, size, 1, fp) == 0){
                         fprintf(stderr, "reading %s failed！\n", path);
                         write(connfd, &get_reply, sizeof(get_reply));
+                        fclose(fp);
                         continue;
                     }
                     
@@ -232,6 +233,60 @@ again:
                     write(connfd, &get_reply, sizeof(get_reply));
                 }
 
+            }
+            //receive a PUT_REQUEST
+            else if (msg_buf.type == (char)0xA9){
+                char filename_buf[256]; // we assume that strlen(filename) < 256
+                struct message_s put_reply;
+                memcpy(put_reply.protocol, ftp_protocol, 6);
+                put_reply.type = 0xAA;
+                put_reply.status = 0;
+                put_reply.length = 12;
+
+                if (client_state == STATE_MAIN){
+
+                    //get the filename from client
+                    if ((n = read(connfd, filename_buf, msg_buf.length - 12)) < 0){
+                        fprintf(stderr, "fail to get the filename! upload denied!\n");
+                        //send a PUT_REPLY with status=0
+                        write(connfd, &put_reply, sizeof(put_reply));
+                        continue;
+                    }
+
+                    //so we get filename now, we may allow client to upload file now
+                    put_reply.status = 1;
+                    write(connfd, &put_reply, sizeof(put_reply));         
+
+                    //now we need to receive the file data
+                    char file_buf[MAX_FILE];
+                    if(read(connfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xFF){
+                        fprintf(stderr, "fail to get FILE_DATA\n");
+                        continue;
+                    }
+                    if (read(connfd, &file_buf, msg_buf.length - 12) != (msg_buf.length - 12)){
+                        fprintf(stderr, "fail to get file data payload!\n");
+                        continue;
+                    }
+                    fprintf(stdout, "file uploaded received successfully\n");
+
+                    FILE *fp;
+                    char path[256] = {0};
+                    strcat(path, "./filedir/");
+                    strcat(path, filename_buf);
+
+                    if((fp=fopen(path, "wb")) == NULL){
+                        fprintf(stderr, "Cannot open(or create) %s！\n", path);
+                        continue;
+                    }
+                    fwrite(file_buf, sizeof(char), msg_buf.length - 12, fp);
+                    fprintf(stdout, "file stored successfully\n");
+                    fclose(fp);
+
+                }
+                else{
+                    printf("client try to download files without authentication!\n");
+                    write(connfd, &put_reply, sizeof(put_reply));
+                }
             }
         }
         if (n < 0 && errno == EINTR)
