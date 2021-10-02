@@ -1,5 +1,7 @@
 #include "myftp.h"
 
+const char ftp_protocol[6] = {0xe3, 'm', 'y', 'f', 't', 'p'};
+
 int main(int argc, char **argv)
 {
     int sockfd;
@@ -12,7 +14,7 @@ int main(int argc, char **argv)
     printf("$");
     //start the shell loop
     while(fgets(str, MAXLINE, stdin) != NULL){
-        printf("$");
+        
         char *p = strchr(str, '\n');
         if (p)
             *p = 0;
@@ -38,6 +40,7 @@ int main(int argc, char **argv)
                 inet_pton(AF_INET, args[1], &servaddr.sin_addr);
                 if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0){
                     fprintf(stderr, "TCP connection failed\n");
+                    printf("$");
                     continue;
                 }
 
@@ -49,12 +52,14 @@ int main(int argc, char **argv)
                 write(sockfd, &open_conn_request, sizeof(open_conn_request));
 
                 //receive the server's reply
-                if(read(sockfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf)){
+                if(read(sockfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xA2){
                     fprintf(stderr, "fail to get OPEN_CONN_REPLY\n");
+                    printf("$");
                     continue;
                 }
                 if (msg_buf.status == 0){
                     fprintf(stderr, "connection rejected\n");
+                    printf("$");
                     continue;
                 }
                 state = STATE_CONNECTED;
@@ -81,7 +86,24 @@ int main(int argc, char **argv)
                 write(sockfd, &auth_request, sizeof(auth_request));
                 write(sockfd, payload, strlen(payload) + 1);
 
-                // recevie
+                // recevie a AUTH_REPLY
+                if(read(sockfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xA4){
+                    state = STATE_OFFLINE;
+                    close(sockfd);
+                    fprintf(stderr, "fail to get OPEN_CONN_REPLY\n");
+                    printf("$");
+                    continue;
+                }
+                if (msg_buf.status == 0){
+                    state = STATE_OFFLINE;
+                    close(sockfd);
+                    fprintf(stderr, "authentication rejected\n");
+                    printf("$");
+                    continue;
+                }
+                state = STATE_MAIN;
+                fprintf(stdout, "authentication get successfully\n");
+
             }
             else if (state == STATE_OFFLINE)
                 printf("you need to open a connection before authentication!\n");
@@ -89,36 +111,9 @@ int main(int argc, char **argv)
                 printf("you have already authenticated!\n");
         }
 
+        printf("$");
     }
     exit(1);
 }
 
 
-char **prase_aguments(char *str){
-    char **args;
-    int cnt = 0;
-    args = malloc(80);
-    for (int i = 0; i < 10; i++)
-        args[i] = malloc(20);
-    char *p = str, *q = str;
-
-    while (p = strchr(p, ' ')){
-        *p = 0;
-        //puts(q);
-        //printf("%d", (int)strlen(q));
-        strcpy(args[cnt++], q);
-        p++;
-        while (*p == ' ')
-            p++;
-        q = p;
-    }
-    // if (p = strchr(p, '\n'))
-    //     *p = 0;
-    if(*q){
-        strcpy(args[cnt++], q);
-        //puts(q);
-    }
-    // printf("%d", (int)strlen(q));
-
-    return args;
-}

@@ -1,3 +1,6 @@
+#ifndef MYFTP_H_
+#define MYFTP_H_
+
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -36,5 +39,5 @@ void str_cli(FILE *fp, int sockfd);
 void str_echo(int sockfd);
 char **prase_aguments(char *str);
 
-const char ftp_protocol[6] = {0xe3, 'm', 'y', 'f', 't', 'p'};
 
+#endif
