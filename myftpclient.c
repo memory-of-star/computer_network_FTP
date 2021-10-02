@@ -251,6 +251,28 @@ int main(int argc, char **argv)
             else
                 printf("you need to authenticate first!\n");
         }
+        //quit command
+        else if (strcmp(args[0], "quit") == 0){
+            if (state == STATE_MAIN){
+                //send a protocol message QUIT_REQUEST to the server
+                struct message_s quit_request;
+                memcpy(quit_request.protocol, ftp_protocol, 6);
+                quit_request.type = 0xAB;
+                quit_request.length = 12;
+                write(sockfd, &quit_request, sizeof(quit_request));
+
+                //then receive a QUIT_REPLY
+                if(read(sockfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xAC){
+                    fprintf(stderr, "fail to get QUIT_REPLY\n");
+                    printf("$");
+                    continue;
+                }
+                close(sockfd);
+                break;
+            }
+            else
+                printf("you need to authenticate first!\n");
+        }
 
         printf("$");
     }

@@ -288,6 +288,21 @@ again:
                     write(connfd, &put_reply, sizeof(put_reply));
                 }
             }
+            //receive a QUIT_REQUEST
+            else if (msg_buf.type == (char)0xAB){
+                struct message_s quit_reply;
+                memcpy(quit_reply.protocol, ftp_protocol, 6);
+                quit_reply.type = 0xAC;
+                quit_reply.length = 12;
+
+                if (client_state == STATE_MAIN){
+                    write(connfd, &quit_reply, sizeof(quit_reply));
+                }
+                else{
+                    printf("client try to quit without authentication!\n");
+                    write(connfd, &quit_reply, sizeof(quit_reply));
+                }
+            }
         }
         if (n < 0 && errno == EINTR)
             goto again; //soft interrupt, try again
