@@ -1,3 +1,4 @@
 *.o
 myftpclient
 myftpserver
+/filedir/*
