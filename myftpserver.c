@@ -6,7 +6,7 @@ int main(int argc, char **argv){
     int listenfd, connfd;
     socklen_t clilen;
     struct sockaddr_in cliaddr, servaddr;
-
+    
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     bzero(&servaddr, sizeof(servaddr));
@@ -24,15 +24,24 @@ int main(int argc, char **argv){
         printf("get a connection\n");
         //
         //str_echo(connfd);
-        serve_a_client(connfd);
+        pthread_t thread;
+        pthread_attr_t attr;
+        pthread_attr_init(&attr); 
+        pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
+        int *connfd_p = malloc(sizeof(connfd));
+        *connfd_p = connfd;
+
+        pthread_create(&thread, &attr, (void*)&serve_a_client, (void*)connfd_p);
+        
         
     }
 }
 
-void serve_a_client(int connfd){
+void serve_a_client(void *connfd_p){
     int client_state = STATE_OPEN_CONNECTION; 
     struct message_s msg_buf;
     int n;
+    int connfd = *((int *)connfd_p);
     //start to serve for the current client connected
 again:
     while((n = read(connfd, &msg_buf, sizeof(msg_buf))) > 0){
@@ -66,7 +75,7 @@ again:
                 fprintf(stderr, "fail to read the authentication payload! permission denied!\n");
                 //send a AUTH_REPLY with status=0
                 write(connfd, &auth_reply, sizeof(auth_reply));
-                return;
+                continue;
             }
 
             //check username and passwd in access.txt
@@ -76,7 +85,7 @@ again:
             if((fp=fopen("access.txt", "rt")) == NULL){
                 fprintf(stderr, "Cannot open access.txt！\n");
                 write(connfd, &auth_reply, sizeof(auth_reply));
-                return;
+                continue;
             }
 
             int matched = 0;
@@ -121,7 +130,7 @@ again:
                 if((dir = opendir("filedir"))==NULL){  
                     printf("failed to open filedir!\n"); 
                     write(connfd, &list_reply, sizeof(list_reply)); 
-                    return;  
+                    continue;  
                 }
                 
                 while(!readdir_r(dir, &entry, &result) && result){
@@ -164,7 +173,7 @@ again:
                     fprintf(stderr, "fail to get the filename! download denied!\n");
                     //send a GET_REPLY with status=0
                     write(connfd, &get_reply, sizeof(get_reply));
-                    return;
+                    continue;
                 }
 
                 //then check if file is in filedir
@@ -176,7 +185,7 @@ again:
                 if((dir = opendir("filedir"))==NULL){  
                     printf("failed to open filedir!\n");  
                     write(connfd, &get_reply, sizeof(get_reply));
-                    return;  
+                    continue;  
                 }
                 
                 while(!readdir_r(dir, &entry, &result) && result){
@@ -190,7 +199,7 @@ again:
                 if (!matched){
                     printf("%s is not in filedir! download denied!\n", filename_buf);
                     write(connfd, &get_reply, sizeof(get_reply));
-                    return;
+                    continue;
                 }
                 //now we know the file exist
                 FILE *fp;
@@ -202,7 +211,7 @@ again:
                 if((fp=fopen(path, "rb")) == NULL){
                     fprintf(stderr, "Cannot open %s！\n", path);
                     write(connfd, &get_reply, sizeof(get_reply));
-                    return;
+                    continue;
                 }
 
                 // while(fread(file_buf, sizeof(unsigned char), MAX_FILE, fp) != 0)
@@ -215,7 +224,7 @@ again:
                     fprintf(stderr, "reading %s failed！\n", path);
                     write(connfd, &get_reply, sizeof(get_reply));
                     fclose(fp);
-                    return;
+                    continue;
                 }
                 
                 //ok, now we can tell the client to download the file
@@ -256,7 +265,7 @@ again:
                     fprintf(stderr, "fail to get the filename! upload denied!\n");
                     //send a PUT_REPLY with status=0
                     write(connfd, &put_reply, sizeof(put_reply));
-                    return;
+                    continue;
                 }
 
                 //so we get filename now, we may allow client to upload file now
@@ -267,11 +276,11 @@ again:
                 char file_buf[MAX_FILE];
                 if(read(connfd, &msg_buf, sizeof(msg_buf)) != sizeof(msg_buf) || msg_buf.type != (char)0xFF){
                     fprintf(stderr, "fail to get FILE_DATA\n");
-                    return;
+                    continue;
                 }
                 if (read(connfd, &file_buf, msg_buf.length - 12) != (msg_buf.length - 12)){
                     fprintf(stderr, "fail to get file data payload!\n");
-                    return;
+                    continue;
                 }
                 fprintf(stdout, "file uploaded received successfully\n");
 
@@ -282,7 +291,7 @@ again:
 
                 if((fp=fopen(path, "wb")) == NULL){
                     fprintf(stderr, "Cannot open(or create) %s！\n", path);
-                    return;
+                    continue;
                 }
                 fwrite(file_buf, sizeof(char), msg_buf.length - 12, fp);
                 fprintf(stdout, "file stored successfully\n");

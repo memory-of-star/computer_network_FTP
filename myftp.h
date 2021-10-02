@@ -6,12 +6,14 @@
 #include <sys/signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#include <pthread.h>
 
 #define MAXLINE 64
 #define PORT     4096    // 端口号
@@ -36,7 +38,7 @@ struct message_s{
 void str_cli(FILE *fp, int sockfd);
 void str_echo(int sockfd);
 char **prase_aguments(char *str);
-void serve_a_client(int);
+void serve_a_client(void*);
 
 
 #endif

@@ -5,7 +5,7 @@ myftpclient: myftpclient.o func.o
 	gcc -o myftpclient myftpclient.o func.o
 
 myftpserver: myftpserver.o func.o
-	gcc -o myftpserver myftpserver.o func.o
+	gcc -o myftpserver myftpserver.o func.o -lpthread
 
 myftpclient.o: myftp.h myftpclient.c
 	gcc -c myftpclient.c
