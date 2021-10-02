@@ -1,4 +1,3 @@
 *.o
 myftpclient
 myftpserver
-/filedir/*

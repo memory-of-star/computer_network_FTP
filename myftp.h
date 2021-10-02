@@ -1,15 +1,11 @@
 #ifndef MYFTP_H_
 #define MYFTP_H_
 
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/epoll.h>
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
@@ -40,6 +36,7 @@ struct message_s{
 void str_cli(FILE *fp, int sockfd);
 void str_echo(int sockfd);
 char **prase_aguments(char *str);
+void serve_a_client(int);
 
 
 #endif
