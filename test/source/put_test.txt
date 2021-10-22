@@ -1,0 +1,6 @@
+open localhost 43145
+auth Dave 123456
+ls
+put put.txt
+ls
+quit

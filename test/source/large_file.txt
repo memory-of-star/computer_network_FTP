@@ -1,0 +1,5 @@
+open localhost 43145
+auth Carol ILoveComputerNetwork!
+get JinYongsWorks.tar
+ls
+quit

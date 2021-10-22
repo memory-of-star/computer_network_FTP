@@ -1,0 +1,5 @@
+open localhost 43145
+auth Bob ??????
+get asciitext.txt
+get asciitext.txt
+quit

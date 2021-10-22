@@ -1,0 +1,4 @@
+open localhost 43145
+auth Alice abcdefghijklmnopqrstuvwxyz
+ls
+quit

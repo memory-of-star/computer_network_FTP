@@ -1,0 +1,30 @@
+open localhost 43145
+auth Carol ILoveComputerNetwork!
+ls
+get binary.o 
+ls
+get binary.o
+ls
+ls
+get binary.o
+ls
+ls
+get binary.o
+ls
+ls
+ls
+ls
+ls
+get binary.o
+ls
+get binary.o
+ls
+ls
+get binary.o
+ls
+ls
+ls
+ls
+ls
+ls
+quit
